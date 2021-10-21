@@ -1,0 +1,36 @@
+package:
+  name:    {{ name }}
+  version: {{ version }}
+
+source:
+  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
+
+
+build:
+  number: 0
+  noarch: python
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  host:
+    - pip
+    - python >=3.8,<3.10
+  run:
+    - python >=3.8,<3.10
+
+test:
+  imports:
+    - {{ name }
+      
+about:
+  home: "https://github.com/marco-mariotti/{{name}}"
+  license: MIT
+  license_family: MIT
+  license_file: 
+  summary: "Utility to split shell commands into jobs, then submit them for computation to a queue of a SGE or Slurm cluster."
+  doc_url: https://qjob.readthedocs.io/
+  dev_url: 
+
+extra:
+  recipe-maintainers:
+    - marco-mariotti
