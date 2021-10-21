@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 __author__  = "Marco Mariotti"
 __email__   = "marco.mariotti@ub.edu"
-__version__ = "0.0.3"
+
+from ._version import __version__
 import sys, os, subprocess, shlex, shutil
 from more_itertools import divide, chunked
 from easyterm import command_line_options, read_config_file, write, printerr, check_file_presence, NoTracebackError
@@ -63,7 +64,7 @@ slurm_header_array_job= slurm_header_template+"""#SBATCH -e {logerr}
 #### help messages
 help_msg="""qjob: utility to split commands into "jobs", then submit them to a queue of a SGE or Slurm cluster.
 
-#### Minimal cluster_job usage:
+#### Basic usage:
    #1   qjob.py  -i input_lines.sh 
 or #2   qjob.py  -c template_command.sh -d data_table.tsv
 
@@ -109,20 +110,21 @@ long_help="""## Utilities:
 -e       do not export the current environment in the job 
 -so      options for qsub (sge) or sbatch (slurm). Use quotes: e.g. -so " -tc 5 "
 -arr     submit as array job. Provide an index range (e.g. 1-10) as argument 
-         Requires a template input (-c) including taskid variables; -d may be omitted         
+         Requires a template input (-c) including taskid variables, e.g. $SGE_TASK_ID
+         Data table (-d) may be used to expand the template but it is not required
 -f       force overwrite of jobs folder if existing. By default, qjob prompts the user
 -qsyn    defining synonyms for -q, using format: "SYN_NAME=queue1;OTHER_SYN=queue2,queue3"
 -email   email provided when submitting job
--E       send an email in conditions determined by the argument. Multiple ones can be concatenated, e.g. -E abe
+-E       send an email in conditions determined by the argument. Multiple may be concatenated, e.g. -E abe
     b:  at the beginning of the job;          e:  end of the job; 
     a:  if aborted (or rescheduled in sge);   s:  suspended <sge only>;   v:  verbose, mails for anything
 
 ## SGE system only:
--pe     +   parallelization environment for SGE (default: smp); taken from -peq if provided
--peq    +   defining which -pe to use based on the -q argument; format: "QUEUE_X:pe1;SYNONYM_Y:pe2"
+-pe      parallelization environment for SGE (default: smp); taken from -peq if provided
+-peq     defining which -pe to use based on the -q argument; format: "QUEUE_X:pe1;SYNONYM_Y:pe2"
 
 ## Slurm system only:
--srun       slurm only; prefix each command line by "srun "
+-srun    prefix each command line by "srun "
 """
 
 command_line_synonyms={'Q':'qsub', 'nj':'njobs', 'nl':'nlines', 'force':'f',
@@ -229,8 +231,8 @@ def main(args={}):
       write(f'Input: data table {opt["d"]}')                
       check_file_presence(opt['d'], 'data file to fill template (option -d)')
       fh=open(opt['d'])
-      fields=fh.readline().split('\t')
-      for line_index, line in enumerate(open(opt['d'])):
+      fields=fh.readline().strip().split('\t')
+      for line_index, line in enumerate(fh):
         s=line[:-1].split('\t')
         if len(s)!=len(fields):
           raise NoTracebackError(f"qjob ERROR parsing data file -d {opt['d']}: line n.{line_index} has {len(s)} fields while header has {len(fields)}. Here's the line:\n{line[:-1]}")
@@ -294,7 +296,7 @@ def main(args={}):
 
   ## job name
   if opt['n']:
-    prefix_name=opt['N'].rstrip('.')
+    prefix_name=opt['n'].rstrip('.')
   else:
     prefix_name=os.path.basename( output_folder[:-4] )
 
@@ -423,7 +425,7 @@ def main(args={}):
         logout='{outfile}.{suf}'.format(outfile=outfile, suf=suffix_out)
         logerr='{outfile}.{suf}'.format(outfile=outfile, suf=suffix_err)
 
-      header=sge_header_array_job.format(email=email,
+      header=sge_header_array_job.format(email=opt['email'],
                                          additional_options=additional_options,
                                          queue_line=queue_line, 
                                          time_line=time_line,
@@ -476,7 +478,7 @@ def main(args={}):
   ######## array mode
   if opt['arr'] and not tot_lines==1:
     name=prefix_name 
-    outfile=os.path.abspath(output_folder+name)
+    outfile=os.path.abspath(output_folder+'/'+name)
     cmd='\n'.join(cmd_lines)   # array mode wants a single job submitted (with TASK_ID)    
     write_array_job(cmd, name, outfile, opt['arr'], output_folder)
 

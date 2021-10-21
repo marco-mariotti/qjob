@@ -9,6 +9,8 @@ source:
 build:
   number: 0
   noarch: python
+  entry_points:
+    - qjob = qjob.cli:main
   script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
@@ -17,11 +19,17 @@ requirements:
     - python >=3.8,<3.10
   run:
     - python >=3.8,<3.10
+    - more-itertools
+    - easyterm >=0.3.0
 
 test:
   imports:
-    - {{ name }
-      
+    - {{ name }}
+
+  commands:
+    - qjob --help
+	
+
 about:
   home: "https://github.com/marco-mariotti/{{name}}"
   license: MIT
