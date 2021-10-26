@@ -24,7 +24,7 @@ Open the file in any text editor, and check (and modify if necessary) at least t
   - ``sys``: your queueing system. Use ``sge`` if it is Sun Oracle Engine / Oracle Grid Engine,
     or ``slurm`` if it is the Slurm Workload Manager.
   - ``q``: default queue name to submit jobs to.
-  - ``m``: default memory in GB requested per job
+  - ``m``: default amount of memory in GB specified per job
   - ``t``: default time limit in hour specified per job
   - ``p``: default number of processors specified per job
   - ``email``: your email for job notifications, if your system implements them

@@ -26,7 +26,7 @@ DRMS, DRM, workload automation), which facilitate distributing jobs.
 Thanks to this, users don't have to manually connect to single
 nodes to run calculation. Instead, they connect and operate uniquely within a "master"
 node. From here, users can run dedicated commands to send jobs to be computed (i.e.,
-submit them).
+*submit* them).
 
 
 When submitting a job, the user has to specify its resource requirements: total time
@@ -63,7 +63,7 @@ The most popular queueing systems used are two: Sun Oracle Engine (SGE, also kno
 Grid Engine) and Slurm Workload Manager (Slurm). Both are supported by qjob. They are roughly
 equivalent in functionalities, but use separate commands. For job submission, SGE provides the
 command ``qsub``, whereas Slurm uses ``sbatch``. If you're unsure which system you have, check
-which of these two commands are available in your shell.
+which of these two commands is available in your shell.
 
 
 (Note: cloud computing is conceptually analogous to huge computing clusters, owned
@@ -112,7 +112,7 @@ consisting of a series of commands such as this ``analysis1_workload.sh`` file :
 	   run_analysis -i file_L -n 50 -o output_L > logs/log_file_L
 	   run_analysis -i file_M -n 50 -o output_M > logs/log_file_M
 
-**The aim of qjob is to simplify splitting the workload into jobs, define job specifications,
+**The aim of qjob is to simplify the everyday tasks of splitting the workload into jobs, define job specifications,
 and submit them for computation**.
 
 There are many possible ways to split the workload into jobs. The example file above 
@@ -275,7 +275,7 @@ Parallel vs sequential execution
 *Jobs* are distributed to different nodes, and run (at least potentially) in parallel.
 What if your calculations have some sequential dependencies, e.g. a first part generating
 the data for a second part? In the following example, the second line must be executed only
-after the first one has finished, same for the fourth after the third.
+after the first one has finished; same for the fourth after the third.
 ::
    
    run_part1 -i inputA    -o midfileA
@@ -284,8 +284,8 @@ after the first one has finished, same for the fourth after the third.
    run_part2 -i midfileB  -o outputB
    
    
-In *direct mode*, **it is assumed that each line of the input workload (option** ``-i``
-**) can be executed in parallel to others**. So, if you use the workload shown above and
+In *direct mode*, **it is assumed that each line of the input workload
+can be executed in parallel to others**. So, if you use the workload shown above and
 you're not careful about how you split it into jobs, you may end up messing up the
 execution order.
 
@@ -312,9 +312,11 @@ is feasible only when the programs employed correctly set their exit status (not
 
    
 This strategy (with ``;`` or ``&&``) works both in direct and template mode. In template mode,
-however, you may actually leave commands as separate lines, and they will be still executed sequentially.
-This is because a template command is never broken into smaller jobs: at most, one job will contain
-one template instance. In other words, in template mode, each template is treated like single
+however, you may actually leave commands as separate lines, and they will still be consistently
+executed sequentially.
+This is because a template command is never broken into smaller jobs: each job will contain
+one or more template instance, but not fractions.
+In other words, in template mode, each template is treated like single
 line are treated in direct mode. So, these two templates are functionally equivalent::
 
   run_part1 -i {input}  -o {mid};  run_part2 -i {mid}    -o {out}
