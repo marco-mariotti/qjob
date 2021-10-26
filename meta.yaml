@@ -1,6 +1,7 @@
 package:
   name:    {{ name }}
-  version: {{ version }}
+  version: "{{ load_setup_py_data().version }}"
+
 
 source:
   url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
@@ -27,8 +28,7 @@ test:
     - {{ name }}
 
   commands:
-    - qjob --help
-	
+    - qjob -h
 
 about:
   home: "https://github.com/marco-mariotti/{{name}}"

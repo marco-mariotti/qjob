@@ -64,7 +64,7 @@ slurm_header_array_job= slurm_header_template+"""#SBATCH -e {logerr}
 #### help messages
 help_msg="""qjob: utility to split commands into "jobs", then submit them to a queue of a SGE or Slurm cluster.
 
-#### Basic usage:
+#### Usage:
    #1   qjob.py  -i input_lines.sh 
 or #2   qjob.py  -c template_command.sh -d data_table.tsv
 
@@ -160,7 +160,7 @@ def main(args={}):
                                synonyms=command_line_synonyms,
                                advanced_help_msg={'full':long_help} )
       with open(user_config_file, 'w') as fh:
-        for key, value in opt.items():
+        for key, value in sorted(opt.items()):
           if key not in def_opt or key=='setup': continue # skipping special options such as -h
           if type(value) is list:            
             fh.write(f'{key}  = {" ".join(value)}\n')
@@ -168,7 +168,7 @@ def main(args={}):
             fh.write(f'{key}  = {value}\n')
       write(  f'\nDone! Now do the following:\n'
               f'1) Run qjob -h to inspect basic options, or qjob -h full for advanced options\n'
-              f'2) You may edit {user_config_file} to set your default options (system, queue, job properties)\n'
+              f'2) Edit {user_config_file} to set your default options (system, queue, job properties, email)\n'
               f'3) Try and submit a test job, e.g. a file containing "echo qjob is working ok"')
       raise NoTracebackError('')
     ################### -setup ### over
