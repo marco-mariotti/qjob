@@ -20,7 +20,7 @@ def_opt= {'i':'',           'c':'',        'd':'',
           'head':'',        'foot':'',
           'e':False,        'so':'',
           'f':False,
-          'bin':'~/bin',    'so':'',
+          'bin':'',         'so':'',
           'E':'a',          'email':'youremail@domain.com',
           'joe':False,      'sl':False,
           'qsyn':'S=queue1,queue2;L=queue3,queue2',           
@@ -200,8 +200,11 @@ def main(args={}):
        not ( (opt['arr'] and opt['c']) or     # array mode not active
              (opt['c']   and opt['d']))       #template mode not active
       or (opt['i'] and (opt['c'] or opt['d'] or opt['arr']))  ): # input active but others specified
-    raise NoTracebackError(f'qjob ERROR you must provide either option -i, or options -c and -d, '
-                           f'or options -c and -arr. \nRun qjob -h for more info')
+    raise NoTracebackError(('qjob ERROR you must provide either:\n'
+                            '   1) option  -i workload_file.sh                          [direct mode]\n'
+                            'or 2) options -c template_cmd.sh  and  -d data_table.tsv   [template mode]\n'
+                            'or 3) options -arr start-end      and  -c template_cmd.sh  [array mode]\n\n'
+                            'Run qjob -h for more info'))
 
   # checking -arr is in the right format, if specified
   if opt['arr']:
@@ -276,23 +279,6 @@ def main(args={}):
   ###  determining number of jobs, number of lines
   tot_lines=len(cmd_lines)
   if tot_lines==0:    raise NoTracebackError("qjob ERROR the list of command lines is empty!")
-  # if tot_lines==1:
-  #   array_mode=False
-  #   # n_lines_per_job=1
-  #   # n_jobs=1
-  # elif opt['arr']:
-  #   array_mode=True
-  #   # n_lines_per_job=1 # actually not used; just a dev reminder
-  #   # n_jobs=1          # same as above
-  # else: #standard case
-  #   array_mode=False    
-  # #   if opt['njobs']:
-  # #     n_lines_per_job= tot_lines  / opt['njobs']
-  # #   else: 
-  # #     n_lines_per_job= opt['nlines']
-  # #   n_jobs=  (tot_lines-1) // n_lines_per_job +1
-
-  # write(f' n_jobs = {n_jobs}   n_lines_per_job = {n_lines_per_job}')
     
   ### Deriving output folder
   if not opt['o']:
@@ -324,9 +310,9 @@ def main(args={}):
   if opt['bin']:
     init_command += 'export PATH='+opt['bin']+':$PATH\n'
   if opt['head']:
-    init_command += join([ line.strip() for line in open(opt['head']) ], '\n')  ##adding header lines
+    init_command += '\n'.join([ line.strip() for line in open(opt['head']) ])  # adding header lines
   footer_command=''  if not opt['foot'] else (
-    join([ line.strip() for line in open(opt['foot']) ], '\n') )  ##adding footer lines
+    '\n'.join([ line.strip() for line in open(opt['foot']) ]) + '\n' )  # adding footer lines
 
   ## determining queue
   queue_name=opt['q'] if not opt['q'] in queue_synonyms else queue_synonyms[opt['q']]
@@ -486,7 +472,7 @@ def main(args={}):
 
       
   ######## array mode
-  if opt['arr'] and not tot_lines==1:
+  if opt['arr']:
     name=prefix_name 
     outfile=os.path.abspath(output_folder+'/'+name)
     cmd='\n'.join(cmd_lines)   # array mode wants a single job submitted (with TASK_ID)    
