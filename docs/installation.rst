@@ -2,22 +2,17 @@ Installation
 ------------
 
 We recommend to use the conda package manager to install qjob
-(check `this page to install conda / miniconda <https://docs.conda.io/en/latest/miniconda.html>`_).
-With conda installed, **run this in a terminal to install qjob**::
+(check `this page to install conda <https://docs.conda.io/en/latest/miniconda.html>`_).
+**Run this in a terminal to install qjob** in your conda environment::
 
     conda install -c mmariotti qjob
 
-You can run this command to check that installation worked correctly, and to see the options of qjob::
-
-    qjob -h
-
-    
 Now, before you start using qjob, run this command::
 
     qjob -setup
 
 This will create a qjob configuration file in your home: ``~/.qjob``.
-
+    
 This file contains all qjob default options for your user.
 Open the file in any text editor, and check (and modify if necessary) at least these items:
 
@@ -29,6 +24,9 @@ Open the file in any text editor, and check (and modify if necessary) at least t
   - ``p``: default number of processors specified per job
   - ``email``: your email for job notifications, if your system implements them
 
+Note that some systems may be configured not to accept some options. If so, use a value of ``0``
+(for integer-type options) or an empty value (for string-type options) to omit that specification.
+    
 Qjob includes many other options. Run ``qjob -h`` for a summary, and ``qjob -h full`` for a full list.
 At any moment, you may come back and edit the ``~/.qjob`` file to change your default settings.
 

@@ -6,7 +6,7 @@
 Welcome to qjob's documentation!
 ================================
 
-Qjob aims to simplify the everyday work of computing cluster users.
+Qjob simplifies the everyday tasks of users of a computing cluster.
 It allows to conveniently turn a set of commands into *jobs*
 which are submitted for execution to a queue.
 Two queueing systems are currently supported by qjob:
@@ -19,6 +19,7 @@ To install qjob, check the :doc:`installation` page.
 
 Next, follow the :doc:`tutorial` to familiarize yourself with its usage.
 
+For any problem, check the :doc:`troubleshooting` page.
 
 .. toctree::
    :maxdepth: 2
@@ -26,4 +27,5 @@ Next, follow the :doc:`tutorial` to familiarize yourself with its usage.
       
    installation
    tutorial
-	     
+   troubleshooting
+   

@@ -15,7 +15,7 @@ def_opt= {'i':'',           'c':'',        'd':'',
           'n':'',           'o':'',
           'nlines':1,       'njobs':0,
           'q':'default_q',  'p':1,
-          'm':'12',         't':'6',
+          'm':12,           't':'6',
           'setup':False,
           'head':'',        'foot':'',
           'e':False,        'so':'',
@@ -24,7 +24,7 @@ def_opt= {'i':'',           'c':'',        'd':'',
           'E':'a',          'email':'youremail@domain.com',
           'joe':False,      'sl':False,
           'qsyn':'S=queue1,queue2;L=queue3,queue2',           
-          'srun':False,
+          'srun':False,     'qos':'',
           'qsub':False,
           'pe':'smp',       'peq':'queue_arg1=pe_type1;queue_arg2=pe_type2' }
 
@@ -33,8 +33,7 @@ sge_header_template="""#!/bin/bash
 #$ -S /bin/bash
 #$ -cwd
 #$ -M {email} {queue_line}{time_line}{additional_options}
-#$ -N {name}
-#$ -l virtual_free={mem}G {cpus} 
+#$ -N {name}{mem}{cpus} 
 """
 sge_header_single_job=sge_header_template+"""#$ -e {logerr}
 #$ -o {logout}
@@ -48,9 +47,8 @@ sge_pe_template=  "\n#$ -pe {pe} {procs}"   ## for n of processors
 slurm_pe_template="\n#SBATCH -c {procs}"   
 
 slurm_header_template="""#!/bin/bash       
-#SBATCH -J {name} {queue_line}{time_line}{additional_options}{cpus}
+#SBATCH -J {name} {queue_line}{time_line}{additional_options}{mem}{cpus}
 #SBATCH --mail-user={email}
-#SBATCH --mem={mem}G
 """
 
 slurm_header_single_job=slurm_header_template+"""#SBATCH -e {logerr}
@@ -62,7 +60,8 @@ slurm_header_array_job= slurm_header_template+"""#SBATCH -e {logerr}
 """
 
 #### help messages
-help_msg="""qjob: utility to split commands into "jobs", then submit them to a queue of a SGE or Slurm cluster.
+
+help_msg="""qjob: split commands into jobs, then submit them to a queueing system
 
 #### Usage:
    #1   qjob.py  -i input_lines.sh 
@@ -83,11 +82,11 @@ It splits command lines in "jobs", and prepare files for their submission to the
 -njobs  | -nj   set this to have a number of jobs X. Overrides -nlines
 -qsub   | -Q    submit the jobs to the queue with qsub (SGE) or sbatch (Slurm)
 
-### Job properties:
--q   queue name(s), comma separated; synonyms can be used (see -q_syn or run with -h default)
+### Job properties:   (use argument 0 to not specify)
+-q   queue name(s), comma separated
 -m   GB of memory requested
--t   time limit requested in hours  (add m suffix for minutes, or d for days; e.g. -t 30m)
--p   number of processors requested (default: 1). Use -p 0 to not specify processors
+-t   time limit in hours. Add m for minutes, or d for days; e.g. -t 30m
+-p   number of processors requested (default: 1)
 
 ## Other options:
 -print_opt    prints default values for all options
@@ -125,10 +124,21 @@ long_help="""## Utilities:
 
 ## Slurm system only:
 -srun    prefix each command line by "srun "
+-qos     specify a Quality of Service; note that some systems require to specify the queue as QOS
+         (qjob -q argument is translated to 'partition' instead). For this, use '-q 0 -qos queue_name'
+         
 """
 
 command_line_synonyms={'Q':'qsub', 'nj':'njobs', 'nl':'nlines', 'force':'f',
                        'tp':'pe'}
+
+def run_cmd(cmd):
+  """Utility function to run bash commands and show joined std.output/std.err if it fails """
+  p=subprocess.run(shlex.split(cmd),
+                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                   text=True)
+  if p.returncode!=0:
+    raise Exception(f'\nWhile running command= {cmd}\nThere was ERROR= {p.stdout}')
 
 #########################################################
 ###### start main program function
@@ -136,14 +146,13 @@ command_line_synonyms={'Q':'qsub', 'nj':'njobs', 'nl':'nlines', 'force':'f',
 def main(args={}):
   """Main function of the program, run when this is executed from the command line """
 
-  # printing program startup header
-  for i in range(16):
-    write(' ', end='', how=['reverse', None][i%2])
-  write('---<<<{:^20}>>>---'.format( f'qjob v{__version__}' ),  end='', how='reverse')
-  for i in range(16):
-    write(' ', end='', how=['reverse', None][(i+1)%2])
-  write('')
-
+  # printing program startup header  
+  qjob_head='<<<{:^16}>>>'.format( f'qjob v{__version__}' )
+  write('_'*62)
+  write('|------------->>>   ', end='')
+  write(qjob_head, how='reverse', end='')
+  write('   <<<-------------|\n')  
+  
   ## loading options  
   if not args:
     user_config_file=os.path.expanduser('~') + '/.qjob'
@@ -321,8 +330,10 @@ def main(args={}):
 
   ## determining queue
   queue_name=opt['q'] if not opt['q'] in queue_synonyms else queue_synonyms[opt['q']]
+
+  ## time limit
   time_limit_minutes=None
-  if opt['t']:   
+  if opt['t'] and opt['t']!='0':  
     if   str(opt['t']).endswith('m'):       time_limit_minutes=int(opt['t'][:-1])  
     elif str(opt['t']).endswith('d'):       time_limit_minutes=int(opt['t'][:-1])*60*24
     elif str(opt['t']).endswith('h'):       time_limit_minutes=int(opt['t'][:-1])*60
@@ -332,20 +343,22 @@ def main(args={}):
   additional_options=''
   if   opt['sys']=='sge':
     ## queue or partition
-    queue_line= "\n#$ -q {}".format(queue_name) if queue_name else ''
+    queue_line= "\n#$ -q {}".format(queue_name) if (queue_name and queue_name!='0') else ''
     ## time constraint
     time_line='\n#$ -l h_rt={h}:{m}:00'.format(h=time_limit_minutes//60, m=time_limit_minutes%60)  if not time_limit_minutes is None else ''
     ## email
     if opt['E']:          additional_options+='\n#$ -m {} '.format(opt['E']  if not opt['E']=='v' else 'abes')
     ## environmental vars
     if not opt['e']:      additional_options+='\n#$ -V '
+    ## memory
+    mem_specs='\n#$ -l virtual_free={m}G'.format(m=opt['m']) if opt['m'] else ''
     ## cpus
     parallelization=opt['pe']    if not queue_name in pe_table else pe_table[queue_name]
     cpu_specs=sge_pe_template.format(procs=opt['p'], pe=parallelization)     if opt['p'] else ''
    
   elif opt['sys']=='slurm':
     ## queue or partition
-    queue_line= "\n#SBATCH -p {}".format(queue_name) if queue_name else ''
+    queue_line= "\n#SBATCH -p {}".format(queue_name) if (queue_name and queue_name!='0')else ''
     ## time constraint
     time_line=  '\n#SBATCH -t 0-{h}:{m}'.format(h=time_limit_minutes//60, m=time_limit_minutes%60)  if not time_limit_minutes is None else ''
     ## email
@@ -356,11 +369,14 @@ def main(args={}):
         additional_options+='\n#SBATCH --mail-type={}'.format(sge_mail_codes2slurm_code[code])
     ## environmental vars
     if not opt['e']:        additional_options+='\n#SBATCH --export ALL'
+    ## memory
+    mem_specs='\n#SBATCH --mem={m}G'.format(m=opt['m']) if opt['m'] else ''
     ## cpus
     cpu_specs=slurm_pe_template.format(procs=opt['p']) if opt['p'] else ''
-
+    if opt['qos']:
+      additional_options+="\n#SBATCH -q {}".format(opt['qos'])
+    
   ## easy handled options:
-  mem=opt['m']
   submit_add_options=opt['so']
   suffix_out='LOG'
   suffix_err='ERR' if not opt['joe'] else 'LOG'
@@ -382,7 +398,7 @@ def main(args={}):
                                           name=name,
                                           outfile=outfile,
                                           cpus=cpu_specs,
-                                          mem=mem,
+                                          mem=mem_specs,
                                           logout=logout,
                                           logerr=logerr)
     elif opt['sys']=='slurm':
@@ -395,7 +411,7 @@ def main(args={}):
                                             name=name,
                                             outfile=outfile,
                                             cpus=cpu_specs,
-                                            mem=mem,
+                                            mem=mem_specs,
                                             logout=logout,
                                             logerr=logerr)
 
@@ -407,12 +423,9 @@ def main(args={}):
     if opt['qsub']:
       write(' \tsubmitting file! ', end='')
       if   opt['sys']=='sge':
-        subprocess.run( shlex.split(f'qsub {submit_add_options} {outfile}'),
-                        capture_output=True, check=True)
-        
+        run_cmd(f'qsub {submit_add_options} {outfile}')        
       elif opt['sys']=='slurm':
-        subprocess.run( shlex.split(f'sbatch {submit_add_options} {outfile}'),
-                        capture_output=True, check=True)
+        run_cmd(f'sbatch {submit_add_options} {outfile}')        
     write('')
 
   def write_array_job(cmd, name, outfile, arr_range, output_folder):
@@ -432,7 +445,7 @@ def main(args={}):
                                          name=name,
                                          outfile=outfile,
                                          cpus=cpu_specs,
-                                         mem=mem,
+                                         mem=mem_specs,
                                          logout=logout,
                                          logerr=logerr,
                                          range_str=arr_range)
@@ -445,14 +458,14 @@ def main(args={}):
         logerr='{outfile}.{suf}'.format(outfile=outfile, suf=suffix_err)
       append_add='\n#SBATCH --open-mode=append'  if opt['sl'] else ''        
 
-      header=slurm_header_array_job.format(email=email,
+      header=slurm_header_array_job.format(email=opt['email'],
                                            additional_options=additional_options + append_add,
                                            queue_line=queue_line, 
                                            time_line=time_line,
                                            name=name,
                                            outfile=outfile,
                                            cpus=cpu_specs,
-                                           mem=mem,
+                                           mem=mem_specs,
                                            logout=logout,
                                            logerr=logerr,
                                            range_str=arr_range)
@@ -466,12 +479,9 @@ def main(args={}):
     if opt['qsub']:
       write(' \tsubmitting file! ', end='')
       if   opt['sys']=='sge':
-        subprocess.run( shlex.split(f'qsub {submit_add_options} {outfile}'),
-                        capture_output=True, check=True)
-        
+        run_cmd(f'qsub {submit_add_options} {outfile}')
       elif opt['sys']=='slurm':
-        subprocess.run( shlex.split(f'sbatch {submit_add_options} {outfile}'),
-                        capture_output=True, check=True)
+        run_cmd(f'sbatch {submit_add_options} {outfile}')
     write('')
 
       
