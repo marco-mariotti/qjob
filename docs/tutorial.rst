@@ -8,6 +8,7 @@ Tutorial of qjob
 
 Introduction to computing clusters and queueing systems
 -------------------------------------------------------
+*Skip this if you're already familiar with the topic*
 
 A *cluster* is a computational infrastructure consisting of a multitude of computers
 (called *nodes*) connected in a network. A cluster may contain hundreds or thousands
