@@ -20,7 +20,7 @@ requirements:
   run:
     - python >=3.8,<3.10
     - more-itertools
-    - easyterm >=0.3.0
+    - easyterm >=0.4.0
 
 test:
   imports:

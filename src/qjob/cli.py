@@ -5,7 +5,6 @@ __email__   = "marco.mariotti@ub.edu"
 from ._version import __version__
 import sys, os, subprocess, shlex, shutil
 from more_itertools import divide, chunked
-sys.path.insert(0, '/users-d3/mmariotti/software/easyterm/src/')
 from easyterm import command_line_options, read_config_file, write, printerr, check_file_presence, NoTracebackError
 
 
