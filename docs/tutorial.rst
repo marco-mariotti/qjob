@@ -168,10 +168,8 @@ qjob command as before, adding option ``-Q``::
 If the *jbs* folder was already created by a previous run (like in our case here), the user will be
 prompted for overwrite confirmation. Then, job files will be created like before, then submitted.
 
-**Note**: before submitting lots of jobs, it is a good practice to always inspect your commands.
-It is also a good idea to test interactively at least one command line, to avoid trivial spelling mistakes.
-If the command seems to start running ok in the master node, you can terminate it (Ctrl+C), and finally submit
-the workload using qjob as shown above.
+.. warning::
+   Before submitting lots of jobs, it is a good practice to always inspect and test your commands!
 
 
 Job specifications and other options
@@ -185,7 +183,7 @@ To specify any non-default parameters, use qjob command line options.
     - option ``-t`` = time limit in hours
     - option ``-p`` = number of processors requested
 
-Another few commonly used options are presented hereafter.
+Another few commonly used options are presented hereafter:
 
 Both the output folder and the job *name* are normally derived from the input file name,
 but they may be specified with options ``-o`` and ``-n``, respectively. The job name is derived
@@ -196,16 +194,14 @@ within the job which aren't redirected already) to .LOG and .ERR files located i
 *jbs* folder. Two options can alter this. Option ``-joe`` joins output and error, so every
 job writes to a single file; and option ``-sl`` joins the output of all jobs of the workload.
 
-In the most typical use of qjob, you specify the desired number of jobs, and the program will
+In the most typical use of qjob, you specify the desired number of jobs with ``-nj``, and the program will
 split the input workload into groups of lines accordingly. However, you can instead decide how many
 command lines you want per job, using option ``-nl``.
 
 
-Qjob provides plenty of other options for customizing behavior. Run::
+Qjob offers plenty of other options. To see the complete list, run::
   
   qjob -h full
-
-to see the complete list of options.
 
 
 Default qjob options
@@ -216,6 +212,31 @@ for your user. You can open this file and modify it with any text editor. Modifi
 will take effect in the next qjob run.
 As explained in :doc:`installation`, this file is created at your first use of qjob,
 when you run ``qjob -setup``.
+
+Configuration shortcuts
+-----------------------
+As you start using qjob daily, you may find yourself employing the same combinations of
+options over and over. For example, you may use a specific short time limit and a narrow
+memory requirement when submitting to a specific 'fast' queue, and use other more sizable
+parameters when submitting to a different 'powerful' queue. Qjob allows to set up shortcuts
+for any combinations of parameters, so that you can activate a (potentially complex)
+qjob configuration using a concise option. Shortcuts are set up with ``-xset`` and
+activated with ``-x``.
+
+For example, let's edit the ``xset`` setting in the ``~/.qjob`` file, so that it reads::
+
+  xset =  fast : ' -q queue1 -m 5 -t 2 '  long : ' -q queue2 -m 20 -t 12 '
+
+In this example, we set up two keywords, ``fast`` and ``long``, which set the same parameters
+(queue name, memory requirement, time limit). Thanks to this, we can now run, for example::
+
+  qjob -i  analysis1_workload.sh  -x fast
+
+And this will be equivalent to::
+  
+  qjob -i  analysis1_workload.sh  -q queue1 -m 5 -t 2
+
+Configuration shortcuts can be used to manipulate any number of options, of any kind.
 
 
 Direct mode vs template mode

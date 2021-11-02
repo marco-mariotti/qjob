@@ -5,6 +5,7 @@ __email__   = "marco.mariotti@ub.edu"
 from ._version import __version__
 import sys, os, subprocess, shlex, shutil
 from more_itertools import divide, chunked
+sys.path.insert(0, '/users-d3/mmariotti/software/easyterm/src/')
 from easyterm import command_line_options, read_config_file, write, printerr, check_file_presence, NoTracebackError
 
 
@@ -23,7 +24,8 @@ def_opt= {'i':'',           'c':'',        'd':'',
           'bin':'',         'so':'',
           'E':'a',          'email':'youremail@domain.com',
           'joe':False,      'sl':False,
-          'qsyn':'S=queue1,queue2;L=queue3,queue2',           
+          'qsyn':'S=queue1,queue2;L=queue3,queue2',
+          'xset':'',        'x':'',
           'srun':False,     'qos':'',
           'qsub':False,
           'pe':'smp',       'peq':'queue_arg1=pe_type1;queue_arg2=pe_type2' }
@@ -112,6 +114,9 @@ long_help="""## Utilities:
          Requires a template input (-c) including taskid variables, e.g. $SGE_TASK_ID
          Data table (-d) may be used to expand the template but it is not required
 -f       force overwrite of jobs folder if existing. By default, qjob prompts the user
+-xset    define configuration shortcuts: keywords which, when called with -x, set any number of options.
+         Format example: -xset 's1:"-q short -t 10" s2:"-q long"' so that '-x s1' implies '-q short -t 10'
+-x       use a config shortcut (keyword as argument). Requires -xset (in ~/.qjob or on command line)
 -qsyn    defining synonyms for -q, using format: "SYN_NAME=queue1;OTHER_SYN=queue2,queue3"
 -email   email provided when submitting job
 -E       send an email in conditions determined by the argument. Multiple may be concatenated, e.g. -E abe
@@ -178,7 +183,9 @@ def main(args={}):
       write(  f'\nDone! Now do the following:\n'
               f'1) Run qjob -h to inspect basic options, or qjob -h full for advanced options\n'
               f'2) Edit {user_config_file} to set your default options (system, queue, job properties, email)\n'
-              f'3) Try and submit a test job, e.g. a file containing "echo qjob is working ok"')
+              f'3) Try and submit a test job, e.g. a file containing "echo qjob is working ok"\n'
+              f'4) Optionally, set up shortcuts for combinations of options you use often, by editing xset in {user_config_file}\n'
+              f'\nFor any doubt, check https://qjob.readthedocs.io/' )
       raise NoTracebackError('')
     ################### -setup ### over
     
@@ -191,6 +198,46 @@ def main(args={}):
       opt=command_line_options(def_opt, help_msg,  'i',
                                synonyms=command_line_synonyms,
                                advanced_help_msg={'full':long_help} )
+
+  ### dealing with shortcuts (options -xset -x)
+  if opt['x']:
+    if not opt['xset']:
+      raise NoTracebackError(f'qjob ERROR -x "{opt["x"]}" provided, but there are no shorcuts set up with -xset')
+
+    # reading xset argument 
+    shortcut_opts={}
+    try:
+      #format example: -xset 's1="-q short -t 10" s2="-q long"' so that '-x s1' implies '-q short -t 10'
+      z=opt['xset'].strip()
+      if z[0]==z[-1] and z in ('"', "'"):
+        z=z[1:-1]
+      while z:
+        r=z.find(':')
+        assert r!=-1,  "qjob ERROR -xset argument must contain ':' between each keyword and its definition"
+        keyword=z[:r].strip()
+        z=z[r+1:].strip()
+        assert z,      f"qjob ERROR -xset keyword {keyword}: argument is empty!"
+        assert z[0] in ('"', "'"), f"ERROR -xset keyword {keyword}: argument must begin and end with a quote (') or double quote (\") "
+        q=z.find(z[0], 1)
+        assert q!=-1, f"qjob ERROR -xset keyword {keyword}: argument must begin and end with a quote (') or double quote (\") "
+        arg=z[1:q]
+        keyword_opt=command_line_options(opt, arglist=shlex.split(arg), add_defaults=False)
+        shortcut_opts[keyword]=keyword_opt
+        z=z[q+2:].strip()
+        
+    except Exception as e:
+      printerr(f'qjob ERROR parsing shortcut definition! Invalid argument provided to -xset: {opt["xset"]} ')
+      raise e from None
+    
+    if not opt['x'] in shortcut_opts:
+      raise NoTracebackError(f"qjob ERROR the argument of -x ({opt['x']}) was not found in shortcut setting -xset ({opt['xset']})" )
+    opt.update( shortcut_opts[opt['x']] )
+
+    ## what if some of the options in shortcut were overriden by command line? Taking care here:
+    opt=command_line_options(opt, help_msg,  'i',
+                             synonyms=command_line_synonyms,
+                             advanced_help_msg={'full':long_help} )
+  ### end of shortcuts
 
   ## checking input options      
   if not opt['sys'] in ['sge', 'slurm']:
