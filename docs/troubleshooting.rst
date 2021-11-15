@@ -19,7 +19,11 @@ you will find a qjob option suited to fix the problem. If you can't find any tha
 the right text, you can always resort to option ``-so`` (*submission options*) to add any arbitrary text
 when calling the submission utility.
 
-If you have a problem that you can't fix after following these steps, contact the qjob developer
-at marco (dot) mariotti (at) ub (dot) edu
+Bug reports and feature requests
+--------------------------------
+
+If you have a problem that you can't fix after following the steps above, you may file an issue at
+`its github page <https://github.com/marco-mariotti/qjob/issues>`_. You can also use the same system
+to file feature requests.
 
 
