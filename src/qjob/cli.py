@@ -295,7 +295,7 @@ def main(args={}):
 
       # checking that all requested keys are in the table      
       formatter=string.Formatter()
-      missing_req_keys=[i[1] for i in formatter(template_line)  if i[1] is not None and not i[1] in fields]
+      missing_req_keys=[i[1] for i in formatter.parse(template_line)  if i[1] is not None and not i[1] in fields]
       if len(missing_req_keys):
         raise NoTracebackError(f"qjob ERROR parsing template -c {opt['c']} and data file -d {opt['d']}, "
                                f"template requires field(s) missing from data file: {' '.join(missing_req_keys)}")
