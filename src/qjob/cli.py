@@ -3,7 +3,7 @@ __author__  = "Marco Mariotti"
 __email__   = "marco.mariotti@ub.edu"
 
 from ._version import __version__
-import sys, os, subprocess, shlex, shutil
+import sys, os, subprocess, shlex, shutil, string
 from more_itertools import divide, chunked
 from easyterm import command_line_options, read_config_file, write, printerr, check_file_presence, NoTracebackError
 
@@ -197,6 +197,8 @@ def main(args={}):
       opt=command_line_options(def_opt, help_msg,  'i',
                                synonyms=command_line_synonyms,
                                advanced_help_msg={'full':long_help} )
+  else:
+    opt=args
 
   ### dealing with shortcuts (options -xset -x)
   if opt['x']:
@@ -287,17 +289,28 @@ def main(args={}):
     cmd_lines=[]
     if opt['d']:
       write(f'Input: data table {opt["d"]}')                
-      check_file_presence(opt['d'], 'data file to fill template (option -d)')
+      check_file_presence(opt['d'], 'data file to fill template (option -d)')            
       fh=open(opt['d'])
       fields=fh.readline().strip().split('\t')
+
+      # checking that all requested keys are in the table      
+      formatter=string.Formatter()
+      missing_req_keys=[i[1] for i in formatter(template_line)  if i[1] is not None and not i[1] in fields]
+      if len(missing_req_keys):
+        raise NoTracebackError(f"qjob ERROR parsing template -c {opt['c']} and data file -d {opt['d']}, "
+                               f"template requires field(s) missing from data file: {' '.join(missing_req_keys)}")
+      
       for line_index, line in enumerate(fh):
+        if not line.strip():
+          continue
         s=line[:-1].split('\t')
         if len(s)!=len(fields):
           raise NoTracebackError(f"qjob ERROR parsing data file -d {opt['d']}: line n.{line_index} has {len(s)} fields while header has {len(fields)}. Here's the line:\n{line[:-1]}")
         datarow={ f:s[fi]  for fi, f in enumerate(fields)}
+        
         try: 
           this_command_line=template_line.format( **datarow )
-        except err:
+        except Exception as err:
           printerr(f"qjob ERROR parsing data file -d {opt['d']} in line n.{line_index} when filling template with data:")
           raise err from None
         cmd_lines.append(this_command_line)
